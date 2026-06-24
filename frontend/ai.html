@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Companion Panel – Invoice Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: #1a1a2e;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      height: 52px;
+    }
+    nav span {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-right: auto;
+    }
+    nav a {
+      color: #a0aec0;
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    nav a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    nav a.active { color: #63b3ed; font-weight: 600; }
+
+    /* ── Page container ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    /* ── Input card ── */
+    .input-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 28px;
+    }
+    .input-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 200px;
+    }
+    label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a5568;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type="text"] {
+      padding: 10px 14px;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    input[type="text"]:focus { border-color: #4299e1; }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    button:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-summary { background: #4299e1; color: #fff; }
+    .btn-dashboard { background: #805ad5; color: #fff; }
+
+    /* ── Loading indicator ── */
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error banner ── */
+    .error-banner {
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #c53030;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+
+    /* ── Split / stacked result area ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 760px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+    .results-grid.single { grid-template-columns: 1fr; }
+
+    /* ── Panel card ── */
+    .panel {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-blue  { background: #4299e1; }
+    .dot-purple { background: #805ad5; }
+
+    /* ── Summary text ── */
+    .summary-text {
+      font-size: 0.93rem;
+      line-height: 1.6;
+      color: #2d3748;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+    }
+
+    /* ── Risk score bar ── */
+    .risk-section { margin-bottom: 20px; }
+    .risk-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4a5568;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .risk-bar-wrap {
+      background: #edf2f7;
+      border-radius: 999px;
+      height: 14px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .risk-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.5s ease;
+    }
+    .risk-value {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    /* ── Tables ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: #f7fafc;
+      color: #4a5568;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #f0f4f8;
+      color: #2d3748;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: #f7fafc; }
+
+    /* ── Severity badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .badge-high   { background: #fff5f5; color: #c53030; border: 1px solid #fc8181; }
+    .badge-medium { background: #fffaf0; color: #c05621; border: 1px solid #f6ad55; }
+    .badge-low    { background: #f0fff4; color: #276749; border: 1px solid #68d391; }
+    .badge-info   { background: #ebf8ff; color: #2b6cb0; border: 1px solid #90cdf4; }
+
+    /* ── Section heading ── */
+    .section-heading {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #718096;
+      margin: 20px 0 10px;
+    }
+    .section-heading:first-of-type { margin-top: 0; }
+
+    /* ── Stat cards ── */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    @media (max-width: 500px) { .stat-cards { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .stat-card .stat-value {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #2d3748;
+      line-height: 1.2;
+    }
+    .stat-card .stat-label {
+      font-size: 0.72rem;
+      color: #718096;
+      margin-top: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Risk indicator row ── */
+    .risk-indicators {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .risk-indicator {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 10px 16px;
+      flex: 1;
+      min-width: 80px;
+    }
+    .ri-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ri-dot-high   { background: #e53e3e; }
+    .ri-dot-medium { background: #dd6b20; }
+    .ri-dot-low    { background: #38a169; }
+    .ri-label { font-size: 0.78rem; color: #718096; font-weight: 600; }
+    .ri-count { font-size: 1.1rem; font-weight: 800; color: #2d3748; margin-left: auto; }
+
+    /* ── Anomaly list ── */
+    .anomaly-list {
+      list-style: none;
+      padding: 0;
+    }
+    .anomaly-list li {
+      padding: 8px 12px;
+      border-left: 3px solid #f6ad55;
+      background: #fffaf0;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.88rem;
+      color: #2d3748;
+      margin-bottom: 6px;
+    }
+    .anomaly-list li:last-child { margin-bottom: 0; }
+    .anomaly-empty {
+      font-size: 0.88rem;
+      color: #a0aec0;
+      font-style: italic;
+    }
+
+    .empty-flags {
+      font-size: 0.88rem;
+      color: #a0aec0;
+      font-style: italic;
+      padding: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span>📊 Invoice Intelligence</span>
+  <a href="index.html">Upload</a>
+  <a href="records.html">Records</a>
+  <a href="ai.html" class="active">AI Panel</a>
+</nav>
+
+<div class="container">
+  <h1>AI Companion Panel</h1>
+  <p class="subtitle">Generate AI-powered summaries and financial dashboards for any record.</p>
+
+  <!-- Input card -->
+  <div class="input-card">
+    <div class="input-row">
+      <div class="input-group">
+        <label for="record-id-input">Record ID</label>
+        <input type="text" id="record-id-input" placeholder="e.g. REC-2024-001" />
+      </div>
+      <div class="btn-group">
+        <button class="btn-summary" id="btn-summary" onclick="generateSummary()">Generate Summary</button>
+        <button class="btn-dashboard" id="btn-dashboard" onclick="generateDashboard()">Generate Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error banner (hidden by default) -->
+  <div class="error-banner" id="error-banner" style="display:none;"></div>
+
+  <!-- Results area (hidden until data arrives) -->
+  <div id="results-area" style="display:none;"></div>
+</div>
+
+<script>
+  const API_URL = "https://YOUR-API-GATEWAY-URL";
+
+  // ── State ──────────────────────────────────────────────────────────
+  let ai_summary   = null;
+  let ai_dashboard = null;
+
+  // ── Utilities ──────────────────────────────────────────────────────
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function clearError() {
+    const el = document.getElementById('error-banner');
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+
+  function setLoading(btnId, isLoading, defaultLabel) {
+    const btn = document.getElementById(btnId);
+    if (isLoading) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loader"></span>Loading…';
+    } else {
+      btn.disabled = false;
+      btn.textContent = defaultLabel;
+    }
+  }
+
+  function getRecordId() {
+    return document.getElementById('record-id-input').value.trim();
+  }
+
+  // ── Risk score colour ──────────────────────────────────────────────
+  function riskColor(score) {
+    if (score < 0.3)  return '#48bb78'; // green
+    if (score <= 0.7) return '#ed8936'; // orange
+    return '#e53e3e';                   // red
+  }
+
+  // ── Severity badge ─────────────────────────────────────────────────
+  function severityBadge(sev) {
+    const s = (sev || '').toLowerCase();
+    if (s === 'high')   return `<span class="badge badge-high">High</span>`;
+    if (s === 'medium') return `<span class="badge badge-medium">Medium</span>`;
+    if (s === 'low')    return `<span class="badge badge-low">Low</span>`;
+    return `<span class="badge badge-info">${escHtml(sev)}</span>`;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmtNumber(n) {
+    if (typeof n !== 'number') return escHtml(String(n));
+    return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  // ── Render summary panel ───────────────────────────────────────────
+  function renderSummaryPanel(data) {
+    const score  = typeof data.overall_risk_score === 'number' ? data.overall_risk_score : 0;
+    const pct    = Math.min(Math.max(score, 0), 1) * 100;
+    const color  = riskColor(score);
+    const flags  = Array.isArray(data.flags) ? data.flags : [];
+
+    let flagsHtml;
+    if (flags.length === 0) {
+      flagsHtml = `<p class="empty-flags">No flags raised.</p>`;
+    } else {
+      const rows = flags.map(f => `
+        <tr>
+          <td>${escHtml(f.type || '')}</td>
+          <td>${escHtml(f.invoice_id || '')}</td>
+          <td>${severityBadge(f.severity)}</td>
+        </tr>`).join('');
+      flagsHtml = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Invoice ID</th>
+              <th>Severity</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    return `
+      <div class="panel">
+        <div class="panel-title">
+          <span class="dot dot-blue"></span>
+          AI Summary
+        </div>
+
+        <div class="risk-section">
+          <div class="risk-label">Overall Risk Score</div>
+          <div class="risk-bar-wrap">
+            <div class="risk-bar-fill" style="width:${pct.toFixed(1)}%; background:${color};"></div>
+          </div>
+          <span class="risk-value" style="color:${color};">${score.toFixed(2)}</span>
+          <span style="font-size:0.78rem; color:#718096; margin-left:4px;">/ 1.00</span>
+        </div>
+
+        <div class="section-heading">Summary</div>
+        <p class="summary-text">${escHtml(data.summary || '')}</p>
+
+        <div class="section-heading">Flags</div>
+        ${flagsHtml}
+      </div>`;
+  }
+
+  // ── Render dashboard panel ─────────────────────────────────────────
+  function renderDashboardPanel(data) {
+    const totals   = data.totals   || {};
+    const vendors  = Array.isArray(data.vendor_breakdown)  ? data.vendor_breakdown  : [];
+    const risks    = data.risk_indicators || {};
+    const anomalies = Array.isArray(data.anomalies) ? data.anomalies : [];
+
+    // Stat cards
+    const statCardsHtml = `
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="stat-value">${fmtNumber(totals.total_invoices ?? 0)}</div>
+          <div class="stat-label">Total Invoices</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$${fmtNumber(totals.total_amount ?? 0)}</div>
+          <div class="stat-label">Total Amount</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$${fmtNumber(totals.average_invoice ?? 0)}</div>
+          <div class="stat-label">Avg Invoice</div>
+        </div>
+      </div>`;
+
+    // Vendor breakdown
+    let vendorHtml;
+    if (vendors.length === 0) {
+      vendorHtml = `<p class="empty-flags">No vendor data available.</p>`;
+    } else {
+      const rows = vendors.map(v => `
+        <tr>
+          <td>${escHtml(v.vendor || '')}</td>
+          <td>$${fmtNumber(v.total ?? 0)}</td>
+        </tr>`).join('');
+      vendorHtml = `
+        <table class="data-table">
+          <thead>
+            <tr><th>Vendor</th><th>Total</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    // Risk indicators
+    const riskHtml = `
+      <div class="risk-indicators">
+        <div class="risk-indicator">
+          <span class="ri-dot ri-dot-high"></span>
+          <span class="ri-label">High</span>
+          <span class="ri-count">${fmtNumber(risks.high ?? 0)}</span>
+        </div>
+        <div class="risk-indicator">
+          <span class="ri-dot ri-dot-medium"></span>
+          <span class="ri-label">Medium</span>
+          <span class="ri-count">${fmtNumber(risks.medium ?? 0)}</span>
+        </div>
+        <div class="risk-indicator">
+          <span class="ri-dot ri-dot-low"></span>
+          <span class="ri-label">Low</span>
+          <span class="ri-count">${fmtNumber(risks.low ?? 0)}</span>
+        </div>
+      </div>`;
+
+    // Anomalies
+    let anomalyHtml;
+    if (anomalies.length === 0) {
+      anomalyHtml = `<p class="anomaly-empty">No anomalies detected.</p>`;
+    } else {
+      const items = anomalies.map(a => `<li>${escHtml(String(a))}</li>`).join('');
+      anomalyHtml = `<ul class="anomaly-list">${items}</ul>`;
+    }
+
+    return `
+      <div class="panel">
+        <div class="panel-title">
+          <span class="dot dot-purple"></span>
+          Financial Dashboard
+        </div>
+
+        <div class="section-heading">Totals</div>
+        ${statCardsHtml}
+
+        <div class="section-heading" style="margin-top:20px;">Vendor Breakdown</div>
+        ${vendorHtml}
+
+        <div class="section-heading" style="margin-top:20px;">Risk Indicators</div>
+        ${riskHtml}
+
+        <div class="section-heading" style="margin-top:20px;">Anomalies</div>
+        ${anomalyHtml}
+      </div>`;
+  }
+
+  // ── Render results area based on state ────────────────────────────
+  function renderResults() {
+    const area = document.getElementById('results-area');
+
+    if (!ai_summary && !ai_dashboard) {
+      area.style.display = 'none';
+      area.innerHTML = '';
+      return;
+    }
+
+    area.style.display = 'block';
+
+    const bothPresent = ai_summary && ai_dashboard;
+    const gridClass   = bothPresent ? 'results-grid' : 'results-grid single';
+
+    let inner = `<div class="${gridClass}">`;
+    if (ai_summary)   inner += renderSummaryPanel(ai_summary);
+    if (ai_dashboard) inner += renderDashboardPanel(ai_dashboard);
+    inner += '</div>';
+
+    area.innerHTML = inner;
+  }
+
+  // ── API calls ──────────────────────────────────────────────────────
+  async function generateSummary() {
+    const recordId = getRecordId();
+    if (!recordId) { showError('Please enter a Record ID.'); return; }
+    clearError();
+
+    setLoading('btn-summary', true, 'Generate Summary');
+    try {
+      const res  = await fetch(`${API_URL}/ai/summary`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ record_id: recordId })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(`Error ${res.status}: ${data.error || 'Request failed'}`);
+        return;
+      }
+
+      ai_summary = data;
+      renderResults();
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      setLoading('btn-summary', false, 'Generate Summary');
+    }
+  }
+
+  async function generateDashboard() {
+    const recordId = getRecordId();
+    if (!recordId) { showError('Please enter a Record ID.'); return; }
+    clearError();
+
+    setLoading('btn-dashboard', true, 'Generate Dashboard');
+    try {
+      const res  = await fetch(`${API_URL}/ai/dashboard`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ record_id: recordId })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(`Error ${res.status}: ${data.error || 'Request failed'}`);
+        return;
+      }
+
+      ai_dashboard = data;
+      renderResults();
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      setLoading('btn-dashboard', false, 'Generate Dashboard');
+    }
+  }
+</script>
+
+</body>
+</html>

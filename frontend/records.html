@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Records — Financial Invoice Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f4f6f9;
+      color: #1a1d23;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      background: #1e2a3a;
+      color: #fff;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header .brand {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header .brand svg {
+      width: 22px;
+      height: 22px;
+      fill: #4ea8e0;
+    }
+
+    nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    nav a {
+      color: #a8c4dc;
+      text-decoration: none;
+      font-size: 0.875rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    nav a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    nav a.active { background: #4ea8e0; color: #fff; }
+
+    /* ── Main ────────────────────────────────────────────────────── */
+    main {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #1e2a3a;
+    }
+
+    .subtitle {
+      color: #5c6a7a;
+      font-size: 0.925rem;
+      margin-bottom: 28px;
+    }
+
+    /* ── Search panel ────────────────────────────────────────────── */
+    .search-panel {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #4a5568;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"] {
+      height: 42px;
+      border: 1.5px solid #d1dae4;
+      border-radius: 7px;
+      padding: 0 14px;
+      font-size: 0.95rem;
+      color: #1a1d23;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #4ea8e0;
+      box-shadow: 0 0 0 3px rgba(78,168,224,0.15);
+    }
+
+    button {
+      height: 42px;
+      padding: 0 24px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { background: #93acd4; cursor: not-allowed; transform: none; }
+
+    /* ── Loading indicator ───────────────────────────────────────── */
+    #loading {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      color: #5c6a7a;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid #d1dae4;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status / error messages ─────────────────────────────────── */
+    #message {
+      display: none;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    #message.info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
+
+    #message.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    /* ── Results header ──────────────────────────────────────────── */
+    #results-header {
+      display: none;
+      font-size: 0.85rem;
+      color: #5c6a7a;
+      margin-bottom: 14px;
+    }
+
+    /* ── Cards grid ──────────────────────────────────────────────── */
+    #cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+      border-left: 5px solid transparent;
+      transition: box-shadow 0.15s;
+    }
+
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+
+    .card.valid   { border-left-color: #16a34a; }
+    .card.invalid { border-left-color: #dc2626; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .card-header .invoice-id {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e2a3a;
+    }
+
+    .card-header .vendor {
+      font-size: 0.875rem;
+      color: #5c6a7a;
+      font-weight: 400;
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge.valid   { background: #dcfce7; color: #15803d; }
+    .badge.invalid { background: #fee2e2; color: #b91c1c; }
+
+    /* Card body */
+    .card-body {
+      padding: 0 20px 16px;
+    }
+
+    .amounts {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .amount-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .amount-item .amount-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+    }
+
+    .amount-item .amount-value {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e2a3a;
+    }
+
+    .card-meta {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    .errors-list {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .error-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: #b91c1c;
+      background: #fff5f5;
+      border-radius: 5px;
+      padding: 5px 10px;
+    }
+
+    .error-item::before {
+      content: "✕";
+      font-weight: 700;
+      flex-shrink: 0;
+      line-height: 1.4;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      padding: 40px 20px 24px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v1.5H8V15zm0-3h8v1.5H8V12zm0-3h5v1.5H8V9z"/>
+    </svg>
+    Financial Invoice Intelligence
+  </div>
+  <nav>
+    <a href="index.html">Upload</a>
+    <a href="records.html" class="active">Records</a>
+    <a href="ai.html">AI Companion</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Invoice Records</h1>
+  <p class="subtitle">Enter a Record ID to view all associated invoices and their validation status.</p>
+
+  <div class="search-panel">
+    <div class="field-group">
+      <label for="record-id-input">Record ID</label>
+      <input
+        type="text"
+        id="record-id-input"
+        placeholder="e.g. REC-2024-001"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
+    <button class="btn-primary" id="fetch-btn" onclick="fetchRecords()">Fetch Records</button>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Fetching records…</span>
+  </div>
+
+  <div id="message"></div>
+
+  <div id="results-header"></div>
+  <div id="cards"></div>
+</main>
+
+<footer>
+  Financial Invoice Intelligence System &mdash; Record View
+</footer>
+
+<script>
+  const API_URL = "https://YOUR-API-GATEWAY-URL";
+
+  const fetchBtn    = document.getElementById("fetch-btn");
+  const loadingEl   = document.getElementById("loading");
+  const messageEl   = document.getElementById("message");
+  const resultsHdr  = document.getElementById("results-header");
+  const cardsEl     = document.getElementById("cards");
+  const inputEl     = document.getElementById("record-id-input");
+
+  // Allow pressing Enter in the input to trigger fetch
+  inputEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") fetchRecords();
+  });
+
+  function showMessage(text, type) {
+    messageEl.textContent = text;
+    messageEl.className   = type;          // "info" or "error"
+    messageEl.style.display = "block";
+  }
+
+  function hideMessage() {
+    messageEl.style.display = "none";
+  }
+
+  function setLoading(on) {
+    loadingEl.style.display  = on ? "flex" : "none";
+    fetchBtn.disabled        = on;
+  }
+
+  function isInvalidStatus(status) {
+    return status === "MISMATCH" || (typeof status === "string" && status.startsWith("INVALID_"));
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.appendChild(document.createTextNode(String(str)));
+    return div.innerHTML;
+  }
+
+  function buildCard(invoice) {
+    const isValid   = invoice.status === "VALID";
+    const cardClass = isValid ? "valid" : "invalid";
+    const badgeClass = isValid ? "valid" : "invalid";
+
+    const errorsHtml = (Array.isArray(invoice.validation_errors) && invoice.validation_errors.length > 0)
+      ? `<div class="errors-list">
+           ${invoice.validation_errors.map(e => `<div class="error-item">${escapeHtml(e)}</div>`).join("")}
+         </div>`
+      : "";
+
+    return `
+      <div class="card ${cardClass}">
+        <div class="card-header">
+          <div>
+            <span class="invoice-id">${escapeHtml(invoice.invoice_id)}</span>
+            <span class="vendor"> &mdash; ${escapeHtml(invoice.vendor)}</span>
+          </div>
+          <span class="badge ${badgeClass}">${escapeHtml(invoice.status)}</span>
+        </div>
+        <div class="card-body">
+          <div class="amounts">
+            <div class="amount-item">
+              <span class="amount-label">Amount</span>
+              <span class="amount-value">${escapeHtml(invoice.amount)}</span>
+            </div>
+            <div class="amount-item">
+              <span class="amount-label">VAT Amount</span>
+              <span class="amount-value">${escapeHtml(invoice.vat_amount)}</span>
+            </div>
+            <div class="amount-item">
+              <span class="amount-label">Total</span>
+              <span class="amount-value">${escapeHtml(invoice.total)}</span>
+            </div>
+          </div>
+          <div class="card-meta">Processed: ${escapeHtml(invoice.processed_at)}</div>
+          ${errorsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  async function fetchRecords() {
+    const recordId = inputEl.value.trim();
+
+    if (!recordId) {
+      showMessage("Please enter a Record ID.", "info");
+      return;
+    }
+
+    hideMessage();
+    cardsEl.innerHTML       = "";
+    resultsHdr.style.display = "none";
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/record/${encodeURIComponent(recordId)}`);
+
+      if (!response.ok) {
+        let detail = `HTTP ${response.status}`;
+        try {
+          const err = await response.json();
+          detail = err.error || err.detail || detail;
+        } catch (_) {}
+        showMessage(`Error fetching records: ${detail}`, "error");
+        return;
+      }
+
+      const invoices = await response.json();
+
+      if (!Array.isArray(invoices) || invoices.length === 0) {
+        showMessage("No records found for this Record ID.", "info");
+        return;
+      }
+
+      resultsHdr.textContent  = `${invoices.length} invoice${invoices.length !== 1 ? "s" : ""} found for "${recordId}"`;
+      resultsHdr.style.display = "block";
+
+      cardsEl.innerHTML = invoices.map(buildCard).join("");
+
+    } catch (err) {
+      showMessage(`Network error: ${err.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+</script>
+
+</body>
+</html>

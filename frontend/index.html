@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financial Invoice Intelligence – Upload</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    }
+    header .logo {
+      width: 28px;
+      height: 28px;
+      background: #4f8ef7;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    nav {
+      margin-left: auto;
+      display: flex;
+      gap: 20px;
+    }
+    nav a {
+      color: #a0aec0;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color .15s;
+    }
+    nav a:hover, nav a.active { color: #fff; }
+
+    /* ── Page layout ── */
+    main {
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px 60px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      width: 100%;
+      max-width: 600px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 28px 32px;
+      color: #fff;
+    }
+    .card-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .card-header p {
+      font-size: 13px;
+      color: #90a0b7;
+    }
+    .card-body {
+      padding: 32px;
+    }
+
+    /* ── Form fields ── */
+    .field {
+      margin-bottom: 22px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 7px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #1a1a2e;
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #4f8ef7;
+      box-shadow: 0 0 0 3px rgba(79,142,247,.15);
+    }
+
+    /* ── Drop zone / file input ── */
+    .drop-zone {
+      border: 2px dashed #cbd5e0;
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #4f8ef7;
+      background: #f0f5ff;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .drop-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .drop-zone .hint {
+      font-size: 14px;
+      color: #718096;
+      margin-bottom: 4px;
+    }
+    .drop-zone .hint strong { color: #4f8ef7; }
+    .drop-zone .sub-hint {
+      font-size: 12px;
+      color: #a0aec0;
+    }
+    .file-chosen {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #f0f5ff;
+      border: 1.5px solid #4f8ef7;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    .file-chosen.visible { display: flex; }
+    .file-chosen .file-name {
+      font-size: 14px;
+      color: #1a1a2e;
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-chosen .remove-btn {
+      background: none;
+      border: none;
+      color: #a0aec0;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .file-chosen .remove-btn:hover { color: #e53e3e; }
+
+    /* ── Submit button ── */
+    .btn-submit {
+      width: 100%;
+      padding: 13px;
+      background: #4f8ef7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-submit:hover:not(:disabled) { background: #3a7ae8; }
+    .btn-submit:active:not(:disabled) { transform: scale(.98); }
+    .btn-submit:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    /* Spinner */
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading .spinner { display: inline-block; }
+    .loading .btn-label { display: none; }
+
+    /* ── Result section ── */
+    #result {
+      display: none;
+      margin-top: 24px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #result.visible { display: block; }
+
+    .result-header {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .result-header.success { background: #f0fff4; border: 1.5px solid #68d391; }
+    .result-header.error   { background: #fff5f5; border: 1.5px solid #fc8181; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .badge-valid { background: #c6f6d5; color: #276749; }
+    .badge-invalid { background: #fed7d7; color: #9b2c2c; }
+
+    .result-body {
+      padding: 20px;
+      background: #f9fafb;
+      border: 1.5px solid #e2e8f0;
+      border-top: none;
+    }
+    .result-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .result-row:last-child { margin-bottom: 0; }
+    .result-row .key {
+      font-weight: 600;
+      color: #4a5568;
+      min-width: 130px;
+      flex-shrink: 0;
+    }
+    .result-row .val { color: #1a1a2e; word-break: break-all; }
+
+    /* Validation errors list */
+    .errors-list {
+      list-style: none;
+      margin-top: 4px;
+    }
+    .errors-list li {
+      padding: 5px 10px;
+      background: #fff5f5;
+      border-left: 3px solid #fc8181;
+      border-radius: 0 4px 4px 0;
+      font-size: 13px;
+      color: #742a2a;
+      margin-bottom: 4px;
+    }
+    .errors-list li:last-child { margin-bottom: 0; }
+    .no-errors {
+      font-size: 13px;
+      color: #276749;
+      font-style: italic;
+    }
+
+    /* Request error banner */
+    .error-banner {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: #fff5f5;
+      border: 1.5px solid #fc8181;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #742a2a;
+    }
+    .error-banner.visible { display: block; }
+    .error-banner strong { display: block; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">FI</div>
+  <h1>Financial Invoice Intelligence</h1>
+  <nav>
+    <a href="index.html" class="active">Upload</a>
+    <a href="records.html">Records</a>
+    <a href="ai.html">AI Companion</a>
+  </nav>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-header">
+      <h2>Upload Invoice</h2>
+      <p>Select a PDF invoice and associate it with a Record ID for processing.</p>
+    </div>
+
+    <div class="card-body">
+      <form id="uploadForm" novalidate>
+
+        <!-- Record ID -->
+        <div class="field">
+          <label for="recordId">Record ID</label>
+          <input
+            type="text"
+            id="recordId"
+            name="record_id"
+            placeholder="e.g. REC-2024-001"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <!-- File drop zone -->
+        <div class="field">
+          <label>Invoice File (PDF)</label>
+          <div class="drop-zone" id="dropZone">
+            <input
+              type="file"
+              id="fileInput"
+              name="file"
+              accept=".pdf"
+              required
+            />
+            <span class="drop-icon">📄</span>
+            <p class="hint"><strong>Click to browse</strong> or drag &amp; drop</p>
+            <p class="sub-hint">PDF files only · max 6 MB</p>
+          </div>
+          <!-- Selected file indicator -->
+          <div class="file-chosen" id="fileChosen">
+            <span class="drop-icon" style="font-size:18px;margin-bottom:0">📄</span>
+            <span class="file-name" id="fileName"></span>
+            <button type="button" class="remove-btn" id="removeFile" title="Remove file">×</button>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span class="btn-label">Upload Invoice</span>
+          <span class="spinner" id="spinner"></span>
+        </button>
+
+      </form>
+
+      <!-- Error banner (network / HTTP errors) -->
+      <div class="error-banner" id="errorBanner">
+        <strong id="errorTitle">Request failed</strong>
+        <span id="errorDetail"></span>
+      </div>
+
+      <!-- Result section -->
+      <div id="result">
+        <div class="result-header" id="resultHeader">
+          <span id="resultStatusBadge" class="status-badge"></span>
+          <span id="resultHeaderText" style="font-size:14px;font-weight:500;color:#4a5568"></span>
+        </div>
+        <div class="result-body">
+          <div class="result-row">
+            <span class="key">Invoice ID</span>
+            <span class="val" id="resInvoiceId">—</span>
+          </div>
+          <div class="result-row">
+            <span class="key">Record ID</span>
+            <span class="val" id="resRecordId">—</span>
+          </div>
+          <div class="result-row">
+            <span class="key">Processed At</span>
+            <span class="val" id="resProcessedAt">—</span>
+          </div>
+          <div class="result-row" style="flex-direction:column">
+            <span class="key" style="margin-bottom:8px">Validation Errors</span>
+            <div id="resErrors"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.card-body -->
+  </div><!-- /.card -->
+</main>
+
+<script>
+  // ── Configuration ──────────────────────────────────────────────────
+  const API_URL = "https://YOUR-API-GATEWAY-URL";
+  // ──────────────────────────────────────────────────────────────────
+
+  const form        = document.getElementById("uploadForm");
+  const fileInput   = document.getElementById("fileInput");
+  const dropZone    = document.getElementById("dropZone");
+  const fileChosen  = document.getElementById("fileChosen");
+  const fileNameEl  = document.getElementById("fileName");
+  const removeBtn   = document.getElementById("removeFile");
+  const submitBtn   = document.getElementById("submitBtn");
+  const errorBanner = document.getElementById("errorBanner");
+  const result      = document.getElementById("result");
+
+  // ── Drag-and-drop visual feedback ──────────────────────────────────
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("drag-over");
+  });
+  ["dragleave", "drop"].forEach((evt) =>
+    dropZone.addEventListener(evt, () => dropZone.classList.remove("drag-over"))
+  );
+
+  // ── File selection ─────────────────────────────────────────────────
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+      showFileChosen(fileInput.files[0].name);
+    }
+  });
+
+  removeBtn.addEventListener("click", () => {
+    fileInput.value = "";
+    fileChosen.classList.remove("visible");
+    dropZone.style.display = "";
+  });
+
+  function showFileChosen(name) {
+    fileNameEl.textContent = name;
+    fileChosen.classList.add("visible");
+    dropZone.style.display = "none";
+  }
+
+  // ── Form submission ────────────────────────────────────────────────
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    hideAll();
+
+    const recordId = document.getElementById("recordId").value.trim();
+    const file = fileInput.files[0];
+
+    if (!recordId) {
+      showError("Validation error", "Please enter a Record ID.");
+      return;
+    }
+    if (!file) {
+      showError("Validation error", "Please select a PDF file.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const base64 = await readFileAsBase64(file);
+
+      const response = await fetch(`${API_URL}/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ record_id: recordId, file: base64 }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errMsg = data.detail || data.error || `HTTP ${response.status}`;
+        showError(`Error ${response.status}`, errMsg);
+        return;
+      }
+
+      showResult(data);
+    } catch (err) {
+      showError("Network error", err.message || "Could not reach the API. Check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // result is "data:<mime>;base64,<data>" — strip the prefix
+        const base64 = reader.result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("Failed to read file."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function setLoading(on) {
+    submitBtn.disabled = on;
+    submitBtn.classList.toggle("loading", on);
+  }
+
+  function hideAll() {
+    errorBanner.classList.remove("visible");
+    result.classList.remove("visible");
+  }
+
+  function showError(title, detail) {
+    document.getElementById("errorTitle").textContent = title;
+    document.getElementById("errorDetail").textContent = detail;
+    errorBanner.classList.add("visible");
+  }
+
+  function showResult(data) {
+    const isValid = data.status === "VALID";
+
+    // Header
+    const badge    = document.getElementById("resultStatusBadge");
+    const hdrText  = document.getElementById("resultHeaderText");
+    const hdr      = document.getElementById("resultHeader");
+
+    badge.textContent = data.status || "UNKNOWN";
+    badge.className   = "status-badge " + (isValid ? "badge-valid" : "badge-invalid");
+    hdr.className     = "result-header " + (isValid ? "success" : "error");
+    hdrText.textContent = isValid
+      ? "Invoice processed successfully."
+      : "Invoice processed with issues.";
+
+    // Fields
+    document.getElementById("resInvoiceId").textContent   = data.invoice_id   || "—";
+    document.getElementById("resRecordId").textContent    = data.record_id    || "—";
+    document.getElementById("resProcessedAt").textContent = data.processed_at || "—";
+
+    // Validation errors
+    const errContainer = document.getElementById("resErrors");
+    const errors = Array.isArray(data.validation_errors) ? data.validation_errors : [];
+    if (errors.length === 0) {
+      errContainer.innerHTML = '<span class="no-errors">No validation errors.</span>';
+    } else {
+      const ul = document.createElement("ul");
+      ul.className = "errors-list";
+      errors.forEach((msg) => {
+        const li = document.createElement("li");
+        li.textContent = msg;
+        ul.appendChild(li);
+      });
+      errContainer.innerHTML = "";
+      errContainer.appendChild(ul);
+    }
+
+    result.classList.add("visible");
+  }
+</script>
+</body>
+</html>
