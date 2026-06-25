@@ -661,7 +661,9 @@ class TestUploadHandler:
         }
 
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = {"body": bedrock_body_mock}
+        mock_bedrock.converse.return_value = {
+            "output": {"message": {"content": [{"text": bedrock_payload}]}}
+        }
 
         mock_ddb = MagicMock()
         mock_table = MagicMock()
@@ -740,7 +742,9 @@ class TestUploadHandler:
         mock_textract.detect_document_text.return_value = {"Blocks": []}
 
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = {"body": bedrock_body_mock}
+        mock_bedrock.converse.return_value = {
+            "output": {"message": {"content": [{"text": bedrock_payload}]}}
+        }
 
         mock_ddb = MagicMock()
         mock_table = MagicMock()
@@ -926,20 +930,26 @@ class TestRecordRetrievalHandlers:
 import io
 
 
-def _make_bedrock_response(payload: dict) -> MagicMock:
-    """Build a mock Bedrock invoke_model response wrapping payload as Claude content."""
-    body_bytes = json.dumps({"content": [{"text": json.dumps(payload)}]}).encode()
-    mock_response = MagicMock()
-    mock_response.__getitem__ = lambda self, key: io.BytesIO(body_bytes) if key == "body" else None
-    return mock_response
+def _make_bedrock_response(payload: dict) -> dict:
+    """Build a mock Bedrock Converse API response wrapping payload as text content."""
+    return {
+        "output": {
+            "message": {
+                "content": [{"text": json.dumps(payload)}]
+            }
+        }
+    }
 
 
-def _make_invalid_bedrock_response() -> MagicMock:
+def _make_invalid_bedrock_response() -> dict:
     """Build a mock Bedrock response that contains non-JSON text."""
-    body_bytes = json.dumps({"content": [{"text": "This is not JSON at all."}]}).encode()
-    mock_response = MagicMock()
-    mock_response.__getitem__ = lambda self, key: io.BytesIO(body_bytes) if key == "body" else None
-    return mock_response
+    return {
+        "output": {
+            "message": {
+                "content": [{"text": "This is not JSON at all."}]
+            }
+        }
+    }
 
 
 def _ai_event(path: str, record_id: str = "REC-1") -> dict:
@@ -968,7 +978,7 @@ class TestAIHandlers:
         }
 
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = _make_bedrock_response(summary_payload)
+        mock_bedrock.converse.return_value = _make_bedrock_response(summary_payload)
 
         with (
             patch("lambda_handler.dynamodb_resource") as mock_ddb,
@@ -991,7 +1001,7 @@ class TestAIHandlers:
         items = [_make_item("REC-1", "INV-001")]
 
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = _make_invalid_bedrock_response()
+        mock_bedrock.converse.return_value = _make_invalid_bedrock_response()
 
         with (
             patch("lambda_handler.dynamodb_resource") as mock_ddb,
@@ -1050,7 +1060,7 @@ class TestAIHandlers:
         }
 
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = _make_bedrock_response(dashboard_payload)
+        mock_bedrock.converse.return_value = _make_bedrock_response(dashboard_payload)
 
         with (
             patch("lambda_handler.dynamodb_resource") as mock_ddb,
@@ -1073,7 +1083,7 @@ class TestAIHandlers:
         items = [_make_item("REC-1", "INV-001")]
 
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = _make_invalid_bedrock_response()
+        mock_bedrock.converse.return_value = _make_invalid_bedrock_response()
 
         with (
             patch("lambda_handler.dynamodb_resource") as mock_ddb,
@@ -1128,7 +1138,7 @@ class TestAIHandlers:
         """CORS headers present on /ai/summary 200 response."""
         items = [_make_item("REC-1", "INV-001")]
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = _make_bedrock_response(
+        mock_bedrock.converse.return_value = _make_bedrock_response(
             {"summary": "ok", "flags": [], "overall_risk_score": 0}
         )
         with (
@@ -1163,7 +1173,7 @@ class TestAIHandlers:
         """CORS headers present on /ai/dashboard 200 response."""
         items = [_make_item("REC-1", "INV-001")]
         mock_bedrock = MagicMock()
-        mock_bedrock.invoke_model.return_value = _make_bedrock_response(
+        mock_bedrock.converse.return_value = _make_bedrock_response(
             {"totals": {"total_invoices": 1, "total_amount": 0, "average_invoice": 0},
              "vendor_breakdown": [], "risk_indicators": {"high": 0, "medium": 0, "low": 0},
              "anomalies": []}

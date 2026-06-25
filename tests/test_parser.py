@@ -74,12 +74,14 @@ class TestParserProperties:
 # ---------------------------------------------------------------------------
 
 def _make_bedrock_response(text: str) -> dict:
-    """Build a mock Bedrock invoke_model response with the given text payload."""
-    body_bytes = json.dumps({
-        "content": [{"type": "text", "text": text}]
-    }).encode()
-    mock_response = {"body": io.BytesIO(body_bytes)}
-    return mock_response
+    """Build a mock Bedrock Converse API response with the given text payload."""
+    return {
+        "output": {
+            "message": {
+                "content": [{"text": text}]
+            }
+        }
+    }
 
 
 class TestParserUnit:
@@ -97,7 +99,7 @@ class TestParserUnit:
         bedrock_text = json.dumps(expected)
 
         with patch("lambda_handler.bedrock_client") as mock_bedrock:
-            mock_bedrock.invoke_model.return_value = _make_bedrock_response(bedrock_text)
+            mock_bedrock.converse.return_value = _make_bedrock_response(bedrock_text)
             result = parse_invoice("Invoice text here")
 
         assert result == expected
@@ -105,7 +107,7 @@ class TestParserUnit:
     def test_invalid_json_in_bedrock_response_returns_fallback(self):
         """Non-JSON text in Bedrock response → fallback dict returned."""
         with patch("lambda_handler.bedrock_client") as mock_bedrock:
-            mock_bedrock.invoke_model.return_value = _make_bedrock_response(
+            mock_bedrock.converse.return_value = _make_bedrock_response(
                 "Sorry, I cannot extract that information."
             )
             result = parse_invoice("Some invoice text")
@@ -130,15 +132,15 @@ class TestParserUnit:
         bedrock_text = f"```json\n{inner_json}\n```"
 
         with patch("lambda_handler.bedrock_client") as mock_bedrock:
-            mock_bedrock.invoke_model.return_value = _make_bedrock_response(bedrock_text)
+            mock_bedrock.converse.return_value = _make_bedrock_response(bedrock_text)
             result = parse_invoice("Invoice text")
 
         assert result["invoice_id"] == "INV-X"
         assert result["vendor"] == "Beta Ltd"
 
-    def test_model_id_is_claude_3_sonnet(self):
-        """parse_invoice must call Bedrock with the Claude 3 Sonnet model ID."""
-        expected_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+    def test_model_id_uses_titan_by_default(self):
+        """parse_invoice must call Bedrock with a Titan model ID by default."""
+        expected_model_id = "us.amazon.nova-2-lite-v1:0"
         inner_json = json.dumps({
             "invoice_id": "INV-1",
             "vendor": "Test",
@@ -148,10 +150,10 @@ class TestParserUnit:
         })
 
         with patch("lambda_handler.bedrock_client") as mock_bedrock:
-            mock_bedrock.invoke_model.return_value = _make_bedrock_response(inner_json)
+            mock_bedrock.converse.return_value = _make_bedrock_response(inner_json)
             parse_invoice("test invoice text")
 
-        call_kwargs = mock_bedrock.invoke_model.call_args[1]
+        call_kwargs = mock_bedrock.converse.call_args[1]
         assert call_kwargs.get("modelId") == expected_model_id, (
             f"Expected modelId={expected_model_id!r}, got {call_kwargs.get('modelId')!r}"
         )
@@ -159,7 +161,7 @@ class TestParserUnit:
     def test_bedrock_call_failure_returns_fallback(self):
         """If Bedrock raises an exception, the fallback dict is returned."""
         with patch("lambda_handler.bedrock_client") as mock_bedrock:
-            mock_bedrock.invoke_model.side_effect = Exception("Bedrock unavailable")
+            mock_bedrock.converse.side_effect = Exception("Bedrock unavailable")
             result = parse_invoice("Some text")
 
         assert result == {
@@ -173,7 +175,7 @@ class TestParserUnit:
     def test_empty_raw_text_returns_valid_response_or_fallback(self):
         """Empty raw_text is forwarded; result is either parsed or fallback dict."""
         with patch("lambda_handler.bedrock_client") as mock_bedrock:
-            mock_bedrock.invoke_model.return_value = _make_bedrock_response(
+            mock_bedrock.converse.return_value = _make_bedrock_response(
                 "not json at all"
             )
             result = parse_invoice("")
